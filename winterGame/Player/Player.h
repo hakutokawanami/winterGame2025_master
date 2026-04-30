@@ -1,0 +1,285 @@
+#pragma once
+#include "Base/GameObject.h"
+#include<memory>
+#include"Item.h"
+class StateBase;
+class Player;
+class Input;
+class Rect;
+class Camera;
+class Stage;
+class GameScene;
+//プレイヤー関連の定数群
+namespace PlayerConstant
+{
+	//プレイヤーの幅
+	constexpr int kWidth = 16;
+	//プレイヤーの高さ
+	constexpr int kHeight = 16;
+	//プレイヤーの表示サイズ
+	constexpr int kWorldSize = 16*3;
+	//プレイヤーの当たり判定拡大倍率
+	constexpr float kRectSize = 2.0f;
+	//仮の地面
+	constexpr int kGround = 800;
+	//横方向の移動スピード
+	constexpr float kMoveSpeed = 1.0f;
+	//重力
+	constexpr float kGravity = 0.3f;
+	//ジャンプの強さ
+	constexpr float kJumpPower = 8.0f;
+	//横方向のマックススピード
+	constexpr float kMaxSpeed = 3.0f;
+	//摩擦の強さ
+	constexpr float kFriction = 0.90f;
+	//ホバリングの強さ
+	constexpr float kHoveringPower = 5.5f;
+
+	constexpr float kNockbackSpeed = 4.0f;
+	constexpr int kNockBackTimeMax = 10;
+
+	constexpr float kBossBattleMoveSpeed = 3.0f;
+}
+
+/// <summary>
+/// プレイヤーがほおばっているかどうか
+/// </summary>
+enum class MouthState
+{
+	empty,
+	holdingEnemy,
+	holdingAir
+};
+/// <summary>
+/// プレイヤーの画像の切り取りラインをenumで決める
+/// </summary>
+enum class PlayerGraphCutNo
+{
+	mouthClosed,
+	mouthOpen,
+	mouthFull
+};
+/// <summary>
+/// 星または空気を表す列挙型。
+/// </summary>
+enum class StarOrAir
+{
+	star,
+	air
+};
+
+/// <summary>
+/// プレイヤークラス
+/// </summary>
+class Player :public GameObject
+{
+public:
+	Player(int GraphHandle);
+	~Player();
+
+	void Init()override;
+	void Init(int stageNo);
+	void Update()override;
+	void Update(Input& input,Stage& stage,Camera& camera);
+	void Draw()override;
+	void Draw(Camera& camera);
+
+	//当たり判定の形を返すゲッター
+	Rect GetColliderRect()const override;
+	//自身のレイヤーを返すゲッター
+	CollisionLayer GetCollisionLayer()const override;
+	//当たりたいレイヤーを返すゲッター
+	CollisionLayer GetHitMask()const override;
+	//当たった時の処理を行う関数
+	void OnCollision(GameObject& other) override;
+
+	//ポジションのゲッター
+	Vector2 GetPosition() { return position_; }
+	//ポジションのセッター
+	void SetPosition(const Vector2& pos) { position_ = pos; }
+
+	//Velocityのゲッター
+	Vector2 GetVelocity() { return velocity_; }
+	//Velocityのセッター
+	void SetVelocity(const Vector2& dir) { velocity_ = dir; }
+
+	//Rectのゲッター
+	Rect& GetHitRect() { return rect_; }
+
+	//現在の画像ハンドルのゲッター
+	int GetGraph() { return currentImage_; }
+	//現在の画像ハンドルのセッター
+	void SetGraph(int handle) { currentImage_ = handle; }
+
+	//当たり判定用のカラーのゲッター
+	int GetRectColor() { return rectColor_; }
+	//当たり判定用のカラーのセッター
+	void SetRectColor(int color) { rectColor_ = color; }
+
+	//HPのゲッター
+	int GetHp() { return hp_; }
+	//HPのセッター
+	void SetHp(int hp) { hp_ = hp; }
+
+	//吸い込みオブジェクトを生成するかのゲッター
+	bool GetGenerateInhale() { return isGenerateInhale_; }
+	//吸い込み状態になったときに呼ぶ
+	void StartInhale() { isGenerateInhale_ = true; }
+
+	//吸い込みオブジェクトを削除するかのゲッター
+	bool GetDeleteInhale() { return isDeleteInhale_; }
+	//吸い込み状態が終わるときに呼ぶ
+	void EndInhale() { isDeleteInhale_ = true; }
+
+	//右を向いているかどうかのゲッター
+	bool GetIsRight() { return isRight_; }
+	//右を向いているかどうかのセッター
+	void SetIsRight(bool isRight) { isRight_ = isRight; }
+
+	//吸い込み状態を継続するかどうかのゲッター
+	bool GetIsInhaledHold() { return isInhaleHold_; }
+	//吸い込み状態を継続するかどうかのセッター
+	void SetIsInhaledHold(bool isInhaledHold) { isInhaleHold_ = isInhaledHold; }
+
+	//ほおばっているかどうかのゲッター
+	MouthState GetMouthState() { return mouthState_; }
+	//ほおばっているかどうかのセッター
+	void SetMouthState(MouthState mouthState) { mouthState_ = mouthState; }
+	//プレイヤーの画像の切り取り位置のセッター
+	void SetPlayerGraphCutNo(PlayerGraphCutNo pgcn) { graphCutNo_ = pgcn; }
+
+	//吐き出しフラグのゲッター
+	bool GetIsSpit() { return isSpit_; }
+	//吐き出しフラグのセッター
+	void SetIsSpit(bool isSpit) { isSpit_ = isSpit; }
+
+	StarOrAir GetStarOrAir() { return starOrAir_; }
+	void SetStarOrAir(StarOrAir starOrAir) { starOrAir_ = starOrAir; }
+
+	void SetIsGround(bool isGround) { isGround_ = isGround; }
+	bool GetIsGround()const { return isGround_; }
+
+	void OnJump() { isGround_ = false; }
+
+	//ノックバックする時間のカウンター
+	void NockBackTimeUpdate() { nockBackTime_++; }
+	//ノックバック状態が終わったかどうかのゲッター
+	bool IsNockBackEnd();
+	//ドアに触れているかどうかのゲッター
+	bool GetIsCollisionDoor() { return isCollisionDoor_; }
+	//死亡しているかどうかのゲッター
+	bool GetIsDead() { return isDead_; }
+
+	double GetDeadAnimAngle() { return deadAnimAngleNum_; }
+	void SetDeadAnimAngle(double num) { deadAnimAngleNum_ = num; }
+
+	int GetMaxHp();
+
+	void OnGetItem(ItemType itemType);
+	
+	bool GetStartBossBattle() { return isStartBossBattle_; }
+	bool SetStartBossBattle(bool isStart) { return isStartBossBattle_ = isStart; }
+
+	//プレイヤーの拡大倍率のセッター
+	void SetSize(double size) { size_ = size; }
+
+	void OnInvincible() { isInvincible_ = true; }
+
+	bool IsRequestCameraShake() { return requestCameraShake_; }
+
+	void SetCameraShakeRequest(bool isCameraShake) { requestCameraShake_ = isCameraShake; }
+
+	bool isPlayMovie() { return isPlayMovie_; }
+	void SetIsPlayMovie(bool isPlayMovie) { isPlayMovie_ = isPlayMovie; }
+
+	void SetScene(GameScene* scene);
+
+	GameScene* GetScene() { return scene_; }
+	/// <summary>
+	/// ステート切り替えの関数
+	/// </summary>
+	/// <param name="newState">切り替えるステート</param>
+	void ChangeState(std::unique_ptr<StateBase>newState);
+
+	/// <summary>
+	/// 重力用関数
+	/// </summary>
+	void Gravity();
+
+	/// <summary>
+	/// X方向の移動を適用する関数
+	/// </summary>
+	void ApplyMovementX();
+
+	/// <summary>
+	/// Y方向の移動を適用する関数
+	/// </summary>
+	void ApplyMovementY();
+	/// <summary>
+	/// X方向のマップとの衝突判定
+	/// </summary>
+	/// <param name="stage">stage情報</param>
+	void MapCollisionX(const Stage& stage,Rect tileRect);
+	/// <summary>
+	/// Y方向のマップとの衝突判定
+	/// </summary>
+	/// <param name="stage">stage情報</param>
+	void MapCollisionY(const Stage& stage,Rect tileRect);
+private:
+	//現在のステートを入れる変数
+	std::unique_ptr<StateBase>state_;
+	//速度ベクトル
+	Vector2 velocity_;
+	//地面にいるかどうか
+	bool isGround_;
+	//現在の画像
+	int currentImage_;
+	//プレイヤーのHP
+	int hp_;
+	//当たり判定用のカラー
+	int rectColor_;
+	//吸い込みオブジェクトを生成するリクエストフラグ
+	bool isGenerateInhale_;
+	//吸い込みオブジェクトを削除するリクエストフラグ
+	bool isDeleteInhale_;
+	//右を向いているかどうか
+	bool isRight_;
+	//吸い込み状態を継続するかどうか
+	bool isInhaleHold_;
+	//ほおばっているかどうかのステート
+	MouthState mouthState_;
+	//プレイヤーの画像切り取りラインを入れる変数
+	PlayerGraphCutNo graphCutNo_;
+	//吐き出しのリクエストフラグ
+	bool isSpit_;
+	//星弾か空気弾か決めるための変数
+	StarOrAir starOrAir_;
+	//吸い込み状態中に出す当たり判定の生成リクエスト
+	bool isGanarateInhaledRect_;
+	//吸い込み状態中に出す当たり判定の削除リクエスト
+	bool isDeleteInhaledRect_;
+	//ノックバックの時間カウンター
+	int nockBackTime_;
+	//無敵時間用フレームカウンター
+	int invincibleFrame_;
+	//無敵時間中かどうか
+	bool isInvincible_;
+	//ドアに触れているかどうか
+	bool isCollisionDoor_;
+	//死亡フラグ
+	bool isDead_;
+	//死亡演出の回転値
+	double deadAnimAngleNum_;
+	//現在のステージナンバー
+	int stageNo_;
+	//プレイヤーの現在の拡大倍率
+	double size_;
+
+	bool isStartBossBattle_;
+
+	bool requestCameraShake_;
+
+	bool isPlayMovie_;
+
+	GameScene* scene_ = nullptr;
+};

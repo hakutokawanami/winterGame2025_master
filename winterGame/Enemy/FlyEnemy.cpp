@@ -1,0 +1,118 @@
+#include "FlyEnemy.h"
+#include<DxLib.h>
+#include"../System/Camera.h"
+#include"../System/Lerp.h"
+#include"../Player/Player.h"
+#include"Application.h"
+constexpr int kHp = 1;
+constexpr int kWidth = 16;
+constexpr int kHeight = 16;
+constexpr int kFlyEnemyCutRow = 3;
+constexpr float kSize = 3.0f;
+constexpr float kRectSize = 3.0f;
+constexpr float kSpeed = 1.5f;
+constexpr float kMaxSpeed = 1.5f;
+constexpr float kNockbackSpeed = 4.0f;
+constexpr int kNockBackTimeMax = 20;
+constexpr int kAnimChangeFrame = 15;
+
+//ãzÇ¢çûÇﬁÇ∆Ç´ÇÃLerpÇÃtÇÃíl
+constexpr float kInhaleLerpT = 0.05f;
+
+FlyEnemy::FlyEnemy(Vector2 pos, int graphHandle, std::shared_ptr<Player> player,std::shared_ptr<EffectManager>effectManager,bool isRight):
+	EnemyBase(kHp, {0,0},pos,graphHandle,player,false,0,EnemyType::fly,effectManager,isRight)
+{
+	state_ = std::make_unique<Move>();
+	rect_.SetCenter(position_.x, position_.y,
+		kWidth * kRectSize, kHeight * kRectSize);
+}
+
+FlyEnemy::~FlyEnemy()
+{
+}
+
+void FlyEnemy::Init()
+{
+
+}
+
+void FlyEnemy::Update()
+{
+}
+
+void FlyEnemy::Update(Stage& stage,Camera& camera)
+{
+	auto wsize = Application::GetInstance().GetWindowSize();
+	if (position_.x < camera.GetPosition().x - wsize.w / 2 - kWidth * kSize ||
+		position_.x >= camera.GetPosition().x + wsize.w / 2 + kWidth * kSize ||
+		position_.y < camera.GetPosition().y - wsize.h / 2 - kHeight * kSize ||
+		position_.y >= camera.GetPosition().y + wsize.h / 2 + kHeight * kSize)
+	{
+		return;
+	}
+	state_->Update(*this);
+	ApplyMovementX();
+	ApplyMovementY();
+	rect_.SetCenter(position_.x, position_.y,
+		kWidth * kRectSize, kHeight * kRectSize);
+
+	if (!isInhaled_)
+	{
+		if (counter_++ >= kAnimChangeFrame)
+		{
+			counter_ = 0;
+			(graphCutNo_ += 1) %= 2;
+		}
+	}
+}
+
+void FlyEnemy::Draw()
+{
+
+}
+void FlyEnemy::Draw(Camera& camera)
+{
+	Vector2 screen = camera.WorldToScreen(position_);
+	
+	if (isAlive_)
+	{
+		DrawRectRotaGraph(screen.x, screen.y,
+			kWidth * static_cast<int>(graphCutNo_), kFlyEnemyCutRow * kHeight,
+			kWidth, kHeight,
+			kSize, 0, 
+			graphHandle_,
+			true, 
+			isRight_);
+	}
+	else
+	{
+		if ((nockBackTime_ / 4) % 2 == 0)
+		{
+			DrawRectRotaGraph(
+				(int)screen.x,
+				(int)screen.y - 5.0f,
+				kWidth * static_cast<int>(graphCutNo_), kFlyEnemyCutRow * kHeight,
+				kWidth, kHeight,
+				3.0,
+				0.0,
+				graphHandle_,
+				TRUE,
+				isRight_
+			);
+		}
+	}
+
+#ifdef _DEBUG
+	Rect drawRect = rect_;
+	drawRect.SetCenter(screen.x, screen.y,
+		kWidth * kRectSize, kHeight * kRectSize);
+	drawRect.Draw(0x0000ff, false);
+#endif // _DEBUG
+}
+
+void FlyEnemy::ChangeState(std::unique_ptr<EnemyStateBase>newState)
+{
+	state_->Exit(*this);
+	state_ = std::move(newState);
+	state_->Enter(*this);
+}

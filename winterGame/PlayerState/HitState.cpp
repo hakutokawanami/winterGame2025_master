@@ -1,0 +1,72 @@
+#include "HitState.h"
+#include"Player.h"
+#include"Input.h"
+#include"IdleState.h"
+#include"MoveState.h"
+#include"InhaleState.h"
+#include"HoveringState.h"
+#include"HitStopState.h"
+#include<DxLib.h>
+
+void PlayerState::HitState::Enter(Player& player)
+{
+	player.SetMouthState(MouthState::empty);
+	player.SetPlayerGraphCutNo(PlayerGraphCutNo::mouthClosed);
+	player.EndInhale();
+
+#ifdef _DEBUG
+	int rectColor = 0xff0000;
+	player.SetRectColor(rectColor);
+#endif // _DEBUG
+}
+void PlayerState::HitState::Update(Player& player, Input& input)
+{
+	if (player.GetIsDead())
+	{
+		player.ChangeState(std::make_unique<PlayerState::HitStopState>());
+		return;
+	}
+
+	player.NockBackTimeUpdate();
+
+	if (player.IsNockBackEnd())
+	{
+		player.SetVelocity({ 0,0 });
+		if (input.IsPressed("left"))
+		{
+			player.SetIsRight(false);
+			player.ChangeState(std::make_unique<PlayerState::MoveState>());
+			return;
+		}
+		else if (input.IsPressed("right"))
+		{
+			player.SetIsRight(true);
+			player.ChangeState(std::make_unique<PlayerState::MoveState>());
+			return;
+		}
+		else
+		{
+			player.ChangeState(std::make_unique<PlayerState::IdleState>());
+			return;
+		}
+
+		if (input.IsTriggered("up"))
+		{
+			player.ChangeState(std::make_unique<PlayerState::HoveringState>());
+			return;
+		}
+
+		if (input.IsTriggered("attack"))
+		{
+			player.ChangeState(std::make_unique<PlayerState::InhaleState>());
+			return;
+		}
+	}
+}
+void PlayerState::HitState::Exit(Player& player)
+{
+#ifdef _DEBUG
+	int rectColor = 0x0000ff;
+	player.SetRectColor(rectColor);
+#endif // _DEBUG
+}
